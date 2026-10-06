@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.util.Base64
 import android.graphics.BitmapFactory
+import java.io.IOException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationCompat
@@ -80,6 +81,9 @@ import java.util.Locale
 import androidx.compose.material3.SelectableDates
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 
 private fun rupiah(value: Int): String = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID")).apply { maximumFractionDigits = 0 }.format(value)
 private fun label(value: String): String = value.replace('_', ' ').replaceFirstChar { it.uppercase() }
@@ -487,10 +491,98 @@ private fun notifyCourierReady(context: Context, detail: String) {
     var budget by remember { mutableStateOf("50000") }
     var minutes by remember { mutableStateOf("15") }
     var people by remember { mutableIntStateOf(2) }
+    val context = LocalContext.current
+    var scannedPhoto by remember { mutableStateOf<Uri?>(null) }
+    var imageLabels by remember { mutableStateOf<List<Pair<String, Float>>>(emptyList()) }
+    var scanning by remember { mutableStateOf(false) }
+    var scanError by remember { mutableStateOf<String?>(null) }
+    val selectedIngredients = remember { mutableStateListOf<String>() }
+    val ingredientOptions = remember(state.catalog) { state.catalog?.menus.orEmpty().flatMap { it.ingredients }.map(String::trim).filter(String::isNotBlank).distinctBy(String::lowercase).sorted() }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            scannedPhoto = uri
+            imageLabels = emptyList()
+            selectedIngredients.clear()
+            scanError = null
+            scanning = true
+            try {
+                val image = InputImage.fromFilePath(context, uri)
+                val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+                labeler.process(image)
+                    .addOnSuccessListener { labels ->
+                        imageLabels = labels.filter { it.confidence >= 0.35f }.take(8).map { it.text to it.confidence }
+                        val labelWords = imageLabels.map { it.first.lowercase() }
+                        selectedIngredients.addAll(ingredientOptions.filter { ingredient ->
+                            ingredientLabelAliases(ingredient).any { alias -> labelWords.any { label -> alias in label } }
+                        })
+                        if (imageLabels.isEmpty()) scanError = "Bahan belum dikenali dari foto ini. Pilih bahan secara manual di bawah."
+                        scanning = false
+                    }
+                    .addOnFailureListener {
+                        scanError = "Foto gagal dianalisis. Coba foto lain atau pilih bahan secara manual."
+                        scanning = false
+                    }
+                    .addOnCompleteListener { labeler.close() }
+            } catch (_: IOException) {
+                scanError = "Foto tidak dapat dibuka. Pilih gambar lain dari galeri."
+                scanning = false
+            } catch (_: Exception) {
+                scanError = "Foto gagal dianalisis. Coba lagi."
+                scanning = false
+            }
+        }
+    }
+    val menusFromIngredients = remember(state.catalog, state.preferences, selectedIngredients.toList()) {
+        val avoided = (state.preferences.allergens + state.preferences.disliked_ingredients).map { it.trim().lowercase() }.filter(String::isNotBlank)
+        state.catalog?.menus.orEmpty().filter { menu ->
+            val menuTerms = (menu.ingredients + menu.allergens).map { it.trim().lowercase() }
+            avoided.none { blocked -> menuTerms.any { term -> blocked in term || term in blocked } } &&
+                selectedIngredients.any { chosen -> menu.ingredients.any { it.equals(chosen, ignoreCase = true) } }
+        }
+    }
     val quickIdeas = listOf("Cepat & praktis" to "makan cepat", "Hemat" to "hemat", "Tanpa ayam" to "ikan atau tahu", "Tidak pedas" to "tidak pedas")
     Scaffold(containerColor = Cream, topBar = { TopAppBar(title = { Text("Rekomendasi lauk", fontWeight = FontWeight.Black) }, navigationIcon = { BackButton(nav::popBackStack) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Cream)) }, bottomBar = { CustomerNav("recommend", nav) }) { inset ->
         LazyColumn(Modifier.fillMaxSize().padding(inset), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item { Text("Ceritakan yang kamu inginkan", fontSize = 27.sp, lineHeight = 31.sp, fontWeight = FontWeight.Black, color = LeafDark); Text("Pilihan hanya diambil dari menu LaukSatSet yang sedang tersedia.", color = Muted); Text("Mesin rekomendasi: ${state.publicSettings.recommendation_engine}", color = Olive, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            item {
+                ChoiceSection("Punya bahan di rumah?") {
+                    Text("Pilih foto bahan. ML Kit mengenali isi foto langsung di perangkat; fotomu tidak diunggah.", color = Muted, fontSize = 13.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { imagePicker.launch("image/*") }, enabled = !scanning, colors = ButtonDefaults.buttonColors(containerColor = Terracotta, contentColor = WarmWhite)) {
+                        Text(if (scanning) "Mengenali bahan…" else if (scannedPhoto == null) "Pilih foto bahan" else "Pilih foto lain")
+                    }
+                    scannedPhoto?.let { Text("Foto dipilih · ${it.lastPathSegment ?: "gambar"}", color = Olive, fontSize = 12.sp) }
+                    if (scanning) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Terracotta)
+                    scanError?.let { Text(it, color = Terracotta, fontSize = 13.sp) }
+                    if (imageLabels.isNotEmpty()) {
+                        Text("Hasil pengenalan · periksa sebelum memilih", fontWeight = FontWeight.Bold)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            imageLabels.forEach { (text, confidence) -> AssistChip(onClick = {}, label = { Text("$text · ${(confidence * 100).toInt()}%") }) }
+                        }
+                        if (selectedIngredients.isEmpty()) Text("Belum ada bahan menu yang cocok otomatis. Pilih bahan yang benar dari daftar.", color = Muted, fontSize = 12.sp)
+                    }
+                    Text("Bahan yang tersedia di menu", fontWeight = FontWeight.Bold)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ingredientOptions.forEach { ingredient ->
+                            FilterChip(selected = ingredient in selectedIngredients, onClick = { if (ingredient in selectedIngredients) selectedIngredients.remove(ingredient) else selectedIngredients.add(ingredient) }, label = { Text(label(ingredient)) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Terracotta, selectedLabelColor = WarmWhite))
+                        }
+                    }
+                    if (selectedIngredients.isNotEmpty()) {
+                        Text("Menu yang cocok", fontWeight = FontWeight.Bold)
+                        if (menusFromIngredients.isEmpty()) Text("Belum ada menu yang cocok dengan bahan dan preferensimu.", color = Muted, fontSize = 13.sp)
+                        menusFromIngredients.forEach { menu ->
+                            val variant = menu.variants.firstOrNull()
+                            Surface(Modifier.fillMaxWidth(), color = Beige, shape = RoundedCornerShape(12.dp)) {
+                                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) { Text(menu.name, fontWeight = FontWeight.Bold, color = Brown); Text("Bahan: ${menu.ingredients.joinToString()}", color = Muted, fontSize = 12.sp); variant?.let { Text(rupiah(it.price), color = Olive, fontWeight = FontWeight.Bold) } }
+                                    TextButton(onClick = { if (variant != null) { vm.addMenuDirect(menu, variant, people); nav.navigate("cart") } }, enabled = variant != null) { Text("Pilih", color = Terracotta) }
+                                }
+                            }
+                        }
+                    }
+                    Text("Hasil pengenalan adalah perkiraan, bukan pemeriksaan keamanan atau kandungan alergen.", color = Muted, fontSize = 11.sp)
+                }
+            }
             item { Text("Pilih kebutuhanmu", fontWeight = FontWeight.SemiBold); FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { quickIdeas.forEach { (title, value) -> Surface(Modifier.fillMaxWidth(.48f).clickable { preference = value; question = "Rekomendasikan lauk $value" }, color = if (preference == value) Terracotta else Beige, shape = RoundedCornerShape(10.dp)) { Text(title, Modifier.padding(16.dp), color = if (preference == value) WarmWhite else Brown, fontWeight = FontWeight.Medium) } } } }
             item { OutlinedTextField(question, { question = it }, Modifier.fillMaxWidth(), label = { Text("Pertanyaan") }, shape = RoundedCornerShape(14.dp), minLines = 2) }
             item { OutlinedTextField(preference, { preference = it }, Modifier.fillMaxWidth(), label = { Text("Selera atau bahan favorit") }, shape = RoundedCornerShape(14.dp)) }
@@ -503,6 +595,23 @@ private fun notifyCourierReady(context: Context, detail: String) {
             }
         }
     }
+}
+
+private fun ingredientLabelAliases(ingredient: String): List<String> {
+    val normalized = ingredient.lowercase()
+    val aliases = when {
+        "ayam" in normalized -> listOf("chicken", "poultry")
+        "ikan" in normalized || "dori" in normalized -> listOf("fish", "seafood")
+        "tahu" in normalized -> listOf("tofu", "soybean", "soy")
+        "jamur" in normalized -> listOf("mushroom", "fungus")
+        "cabai" in normalized || "sambal" in normalized -> listOf("chili", "pepper")
+        "bawang" in normalized -> listOf("onion", "garlic", "shallot")
+        "kemangi" in normalized -> listOf("basil", "herb")
+        "serai" in normalized -> listOf("lemongrass")
+        "kecap" in normalized -> listOf("soy sauce", "sauce")
+        else -> emptyList()
+    }
+    return listOf(normalized) + aliases
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

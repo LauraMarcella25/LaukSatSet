@@ -1,6 +1,7 @@
 # Dokumentasi Fitur dan Alur LaukSatSet
 
-**Versi yang didokumentasikan:** Android 0.16.0 (version code 17)  
+**Versi yang didokumentasikan:** Android 0.17.0 (version code 18)
+
 **Jenis aplikasi:** Android native dengan Jetpack Compose  
 **Bahasa:** Kotlin pada aplikasi; Python/FastAPI pada backend  
 **Peran pengguna:** Pelanggan, Admin, Dapur, dan Pengantar
@@ -70,6 +71,11 @@ flowchart TD
     H[Beranda] --> M[Katalog / pencarian]
     H --> Q[Rekomendasi lauk]
     M --> MD[Detail menu]
+    Q --> SCAN[Pilih foto bahan]
+    SCAN --> ML[ML Kit Image Labeling di perangkat]
+    ML --> ING[Periksa hasil dan pilih bahan]
+    ING --> MATCH[Cocokkan dengan katalog aktif dan filter alergi]
+    MATCH --> OUT
     Q --> F[Isi selera, anggaran, waktu, jumlah orang]
     F --> SAFE[Backend menyaring alergi dan pantangan tersimpan]
     SAFE --> G{Gemini tersedia?}
@@ -82,6 +88,8 @@ flowchart TD
 ```
 
 Preferensi yang dapat dipakai rekomendasi mencakup alergi, bahan yang dihindari, target kalori, aktivitas, tujuan kebugaran, dan frekuensi makan. Backend menyaring menu berdasarkan alergi/pantangan sebelum hasil dipilih. Rekomendasi tidak menggantikan pemeriksaan komposisi pada label produk.
+
+**Pemindai bahan:** pelanggan memilih foto dari galeri. Model dasar ML Kit Image Labeling berjalan di perangkat; aplikasi menampilkan label beserta tingkat keyakinan, lalu mencocokkan bahan yang dikenali dengan bahan pada katalog. Pelanggan dapat mengoreksi pilihan bahan secara manual sebelum melihat menu yang cocok. Gambar tidak dikirim ke backend. Pengenalan bersifat perkiraan dan tidak boleh dipakai untuk memastikan keamanan pangan atau ketiadaan alergen.
 
 ### 4.3 Menyusun paket dan checkout
 
@@ -301,7 +309,7 @@ Mode demo offline berguna untuk mencoba navigasi dan alur contoh. Mode ini tidak
 
 ## 11. Batasan yang perlu diketahui
 
-- Build yang dijelaskan di dokumen ini adalah **debug build 0.16.0**, bukan release produksi yang ditandatangani untuk distribusi Play Store.
+- Build yang dijelaskan di dokumen ini adalah **debug build 0.17.0**, bukan release produksi yang ditandatangani untuk distribusi Play Store.
 - Pembayaran sungguhan membutuhkan backend publik HTTPS, konfigurasi Midtrans Production, notification URL yang benar, dan kredensial production yang hanya berada di server.
 - Grafik dapat menampilkan data contoh dalam mode demo. Data contoh tidak boleh dipakai sebagai laporan kinerja usaha.
 - Perkiraan kalori bergantung pada nilai yang dimasukkan admin. Rekomendasi dan label alergen bergantung pada kelengkapan data katalog.

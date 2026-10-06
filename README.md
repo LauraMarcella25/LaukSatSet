@@ -1,6 +1,6 @@
 # LaukSatSet
 
-Versi aplikasi Android yang didokumentasikan saat ini: **0.16.0 (version code 17)**. Dokumentasi rinci mengenai fitur per peran, langkah penggunaan, diagram alur, status, API, dan konfigurasi tersedia di [Dokumentasi Fitur dan Alur](docs/DOKUMENTASI_FITUR_DAN_ALUR.md). Panel admin memakai empat navigasi utama, kalender slot, paket dua kolom, filter dan ekspor riwayat pengantar. Pesanan baru langsung tercatat di admin dan dapur; setelah pembayaran, dapur mengelola produksi, QC, dan pelepasan langsung ke pengantar sementara admin memantau.
+Versi aplikasi Android yang didokumentasikan saat ini: **0.17.0 (version code 18)**. Dokumentasi rinci mengenai fitur per peran, langkah penggunaan, diagram alur, status, API, dan konfigurasi tersedia di [Dokumentasi Fitur dan Alur](docs/DOKUMENTASI_FITUR_DAN_ALUR.md). Panel admin memakai empat navigasi utama, kalender slot, paket dua kolom, filter dan ekspor riwayat pengantar. Pesanan baru langsung tercatat di admin dan dapur; setelah pembayaran, dapur mengelola produksi, QC, dan pelepasan langsung ke pengantar sementara admin memantau.
 
 Foto bukti pengantaran yang berusia lebih dari enam bulan dibersihkan otomatis saat backend dimulai. Ubah periode dengan `COURIER_PROOF_RETENTION_MONTHS`; data riwayat pengiriman tetap dipertahankan untuk laporan.
 
@@ -39,6 +39,7 @@ Palet antarmuka: Terracotta `#C9684B`, Beige `#F3E4D0`, Brown `#4A332B`, Olive `
 - Pilihan diantar atau ambil sendiri, dua slot waktu per hari, pembatasan area layanan, rincian ongkir/subtotal, dan tanggal paling cepat besok.
 - Detail pesanan dengan timeline, bayar ulang, batal sebelum pembayaran, ganti alamat/jadwal sebelum produksi, nomor pengantar, konfirmasi diterima, ulasan, dan komplain berfoto.
 - Preferensi alergi, bahan yang dihindari, target kalori, frekuensi makan, aktivitas termasuk gym, serta tujuan kebugaran dipakai untuk menyaring rekomendasi.
+- Pemindai foto bahan memakai ML Kit Image Labeling di perangkat dan mencocokkan bahan terpilih dengan menu aktif; pengguna dapat memeriksa hasil pengenalan dan mengubah bahan sebelum memilih lauk.
 - Produk memiliki kategori, foto, estimasi kalori, langkah memasak, dan timer per langkah yang dapat diatur admin.
 - Admin memakai navigasi bawah, kartu produk dua kolom, arsip yang dapat dipulihkan, editor slot langsung, grafik penjualan, ekspor CSV, penetapan pengantar, serta profil keamanan.
 - Dapur mendapat urutan produksi, konfirmasi ganda status/QC, ringkasan H-1, pengingat 30/10 menit, dan profil. Pengantar mengunggah foto barang sebelum berangkat dan foto saat sampai.
@@ -56,7 +57,7 @@ Palet antarmuka: Terracotta `#C9684B`, Beige `#F3E4D0`, Brown `#4A332B`, Olive `
 - Setiap waktu makan dapat memiliki nasi, sambal, dan kerupuk sendiri; harga dihitung ulang backend dan jumlah add-on diteruskan ke rekap packing dapur.
 - Satu pesanan menggunakan satu alamat tujuan utama untuk seluruh jadwal. Jadwal lauk ditentukan satu kali per hari; pickup menampilkan alamat dapur dan tautan Google Maps.
 - Susunan Hari 1 dapat disimpan pada perangkat dan ditempel ke pesanan berikutnya; paket dari Beranda langsung dipilih di Langkah 1.
-- Aplikasi versi 0.16.0 menyertakan profil dapur dan pengantar, bottom navigation Tugas/Profil untuk pengantar, filter grafik admin mingguan/bulanan/tahunan, dan konfirmasi simulasi pembayaran.
+- Aplikasi versi 0.17.0 menyertakan pemindai foto bahan ML Kit, profil dapur dan pengantar, bottom navigation Tugas/Profil untuk pengantar, filter grafik admin mingguan/bulanan/tahunan, dan konfirmasi simulasi pembayaran.
 - Serah terima operasional memakai alur `pesanan dibuat → terlihat di admin & dapur → pembayaran mengaktifkan produksi → QC dapur → dapur menandai siap dikirim → tugas pengantar aktif`. Jika belum ditetapkan, backend memilih pengantar dengan beban aktif paling sedikit. Admin memantau tanpa tombol persetujuan operasional.
 - Error registrasi menunjukkan penyebabnya pada kolom dan respons backend. Pesan sementara hilang otomatis setelah empat detik.
 - Saat detail lauk dibuka dari Stok, tombol pembelian disembunyikan agar alur memasak tidak tercampur dengan pemesanan.

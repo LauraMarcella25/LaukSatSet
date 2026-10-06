@@ -1,6 +1,6 @@
 # Checklist revisi LaukSatSet
 
-Dokumen ini memetakan seluruh butir pada `LaukSatSet.md` dan revisi lanjutan ke implementasi aplikasi versi 0.16.0. Detail penggunaan serta diagram alur terdapat di [Dokumentasi Fitur dan Alur](DOKUMENTASI_FITUR_DAN_ALUR.md).
+Dokumen ini memetakan seluruh butir pada `LaukSatSet.md` dan revisi lanjutan ke implementasi aplikasi versi 0.17.0. Detail penggunaan serta diagram alur terdapat di [Dokumentasi Fitur dan Alur](DOKUMENTASI_FITUR_DAN_ALUR.md).
 
 ## Pelanggan
 
@@ -112,7 +112,7 @@ Dokumen ini memetakan seluruh butir pada `LaukSatSet.md` dan revisi lanjutan ke 
 - [x] Dua belas test backend lulus, termasuk paket 84 posisi, aturan satu jadwal per hari, penyaringan alergi gabungan, batas diskon, perhitungan add-on, dan pengujian end-to-end checkout → antrean dapur → pembayaran → QC dapur → pengantar langsung → penerimaan → stok customer.
 - [x] Smoke test autentikasi, alamat GPS, inbox admin, dan data pengantar lulus.
 - [x] Android `lintDebug` lulus tanpa error.
-- [x] Android `lintDebug` dan `assembleDebug` versi 0.16.0 lulus setelah seluruh perubahan final.
+- [x] Android `lintDebug` dan `assembleDebug` versi 0.17.0 lulus setelah penambahan pemindai ML Kit.
 # Revisi admin, dapur, dan pengantar (v0.10.0)
 
 - [x] Tombol unduh laporan ditempatkan paling atas pada ringkasan admin.
